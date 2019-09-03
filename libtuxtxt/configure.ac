@@ -1,4 +1,4 @@
-AC_INIT(libtuxtxt,0.0.1,,libs)
+AC_INIT(libtuxtxt,2.0.1,,libs)
 AM_INIT_AUTOMAKE([foreign])
 
 TUXBOX_APPS
