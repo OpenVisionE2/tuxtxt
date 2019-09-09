@@ -1691,11 +1691,8 @@ int tuxtxt_start_thread()
 
 	/* set filter & start demuxer */
 	dmx_flt.pid      = tuxtxt_cache.vtxtpid;
-	struct UnloaderConfig_t u;
-	u.unloader_type  = UNLOADER_TYPE_PAYLOAD;
-	u.threshold      = 64;
-	dmx_flt.unloader = u;
-	dmx_flt.output   = OUT_MEMORY;
+	dmx_flt.input    = DMX_IN_FRONTEND;
+	dmx_flt.output   = DMX_OUT_TAP;
 	dmx_flt.pes_type = DMX_PES_OTHER;
 	dmx_flt.flags    = DMX_IMMEDIATE_START;
 
