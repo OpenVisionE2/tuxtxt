@@ -5618,6 +5618,30 @@ printf("%s::%d\n", __FILE__, __LINE__);
 	renderinfo->var_screeninfo.xoffset = 0;
 	renderinfo->var_screeninfo.yoffset = 0;
 #else
+#ifdef TUXTXT_CLEAR_SCREEN
+	/* get fixed screeninfo */
+	if (ioctl(renderinfo->fb, FBIOGET_FSCREENINFO, &renderinfo->fix_screeninfo) == -1)
+	{
+		perror("TuxTxt <FBIOGET_FSCREENINFO>");
+		FTC_Manager_Done(renderinfo->manager);
+		FT_Done_FreeType(renderinfo->library);
+		return 0;
+	}
+	/* map framebuffer into memory */
+	renderinfo->lfb = (unsigned char*)mmap(0, renderinfo->fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 0);
+	if (!renderinfo->lfb)
+	{
+		perror("TuxTxt <mmap>");
+		FTC_Manager_Done(renderinfo->manager);
+		FT_Done_FreeType(renderinfo->library);
+		return 0;
+	}
+	/* clear screen */
+	memset(renderinfo->lfb, 0, renderinfo->var_screeninfo.yres * renderinfo->fix_screeninfo.line_length);
+	/* unmap framebuffer */
+	msync(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len, MS_SYNC);
+	munmap(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len);
+#endif
 	/* change to PAL resolution */
 	/* or, when using TrueType fonts, pick PAL / HD / full-HD based on TTFScreenResX */
 
@@ -5787,6 +5811,9 @@ void tuxtxt_EndRendering(tstRenderInfo* renderinfo)
 	renderinfo->manager = 0;
 	renderinfo->library = 0;
 	tuxtxt_ClearFB(renderinfo,renderinfo->previousbackcolor);
+#ifdef TUXTXT_CLEAR_SCREEN
+	tuxtxt_ClearBB(renderinfo,renderinfo->previousbackcolor);
+#endif
 	/* unmap framebuffer */
 	msync(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len, MS_SYNC);
 	munmap(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len);
