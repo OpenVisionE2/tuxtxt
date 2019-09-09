@@ -295,6 +295,11 @@ typedef struct
 	unsigned char axdrcs[12+1+10+1];
 	struct fb_var_screeninfo var_screeninfo;
 	struct fb_fix_screeninfo fix_screeninfo;
+#ifdef __sh__
+	int xResSc;
+	int yResSc;
+	int strideSc;
+#endif
 	int TTFWidthFactor16, TTFHeightFactor16, TTFShiftX, TTFShiftY; /* parameters for adapting to various TTF fonts */
 	int fontheight, fontwidth, fontwidth_normal, fontwidth_small, fontwidth_topmenumain, fontwidth_topmenusmall, ascender;
 	int displaywidth;

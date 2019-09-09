@@ -24,6 +24,68 @@
 # define FB_DEV "/dev/fb/0"
 #endif
 
+#ifdef __sh__
+#include <linux/stmfb.h>
+
+void blit(tstRenderInfo* renderinfo)
+{
+	STMFBIO_BLT_DATA  bltData;
+	memset(&bltData, 0, sizeof(STMFBIO_BLT_DATA));
+
+	bltData.operation  = BLT_OP_COPY;
+	bltData.srcOffset  = 1920*1080*4;
+
+	if (!renderinfo->var_screeninfo.yoffset) // First Buffer
+		;
+	else // Second Buffer
+		bltData.srcOffset += renderinfo->var_screeninfo.xres * renderinfo->var_screeninfo.yres * 4;
+
+	bltData.srcPitch   = 720 * 4;
+	bltData.srcFormat  = SURF_BGRA8888;
+	bltData.dstFormat  = SURF_BGRA8888;
+	bltData.dstOffset  = 0;
+	bltData.dstPitch   = renderinfo->strideSc;
+	bltData.dst_top    = 0;
+	bltData.dst_left   = 0;
+	bltData.dst_right  = renderinfo->xResSc;
+	bltData.dst_bottom = renderinfo->yResSc;
+
+	if (renderinfo->zoommode == 0)
+	{
+		bltData.src_top    = 0;
+		bltData.src_left   = 0;
+		bltData.src_right  = 720;
+		bltData.src_bottom = 576;
+	}
+	else if (renderinfo->zoommode == 1)
+	{
+		bltData.src_top    = 0;
+		bltData.src_left   = 0;
+		bltData.src_right  = 720;
+		bltData.src_bottom = 576 / 2;
+	}
+	else if (renderinfo->zoommode == 2)
+	{
+		bltData.src_top    = 576 / 2;
+		bltData.src_left   = 0;
+		bltData.src_right  = 720;
+		bltData.src_bottom = 576;
+	}
+	else
+		return;
+
+	if ( ioctl(renderinfo->fb, STMFBIO_BLT, &bltData ) < 0)
+	{
+		perror("ioctl STMFBIO_BLT");
+	}
+
+	if(ioctl(renderinfo->fb, STMFBIO_SYNC_BLITTER) < 0)
+	{
+		perror("ioctl STMFBIO_SYNC_BLITTER");
+	}
+}
+#endif
+
 const char *ObjectSource[] =
 {
 	"(illegal)",
@@ -4842,8 +4904,10 @@ void tuxtxt_CopyBB2FB(tstRenderInfo* renderinfo)
 			renderinfo->var_screeninfo.yoffset = 0;
 		else
 			renderinfo->var_screeninfo.yoffset = renderinfo->var_screeninfo.yres;
+#ifndef __sh__
 		if (ioctl(renderinfo->fb, FBIOPAN_DISPLAY, &renderinfo->var_screeninfo) == -1)
 			perror("TuxTxt <FBIOPAN_DISPLAY>");
+#endif
 		if (renderinfo->StartX > 0 && *renderinfo->lfb != *(renderinfo->lfb + renderinfo->fix_screeninfo.line_length * renderinfo->var_screeninfo.yres)) /* adapt background of backbuffer if changed */
 			tuxtxt_FillBorder(renderinfo,*(renderinfo->lfb + renderinfo->fix_screeninfo.line_length * renderinfo->var_screeninfo.yoffset));
 //			 ClearBB(*(lfb + renderinfo->var_screeninfo.xres * renderinfo->var_screeninfo.yoffset));
@@ -5371,6 +5435,9 @@ void tuxtxt_RenderPage(tstRenderInfo* renderinfo)
 
 		tuxtxt_cache.pageupdate=0;
 	}
+#ifdef __sh__
+	blit(renderinfo);
+#endif
 }
 /******************************************************************************
  * MyFaceRequester
@@ -5542,7 +5609,15 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 		FT_Done_FreeType(renderinfo->library);
 		return 0;
 	}
-
+#ifdef __sh__
+printf("%s::%d\n", __FILE__, __LINE__);
+	renderinfo->xResSc = renderinfo->var_screeninfo.xres;
+	renderinfo->yResSc = renderinfo->var_screeninfo.yres;
+	renderinfo->var_screeninfo.xres = 720;
+	renderinfo->var_screeninfo.yres = 576;
+	renderinfo->var_screeninfo.xoffset = 0;
+	renderinfo->var_screeninfo.yoffset = 0;
+#else
 	/* change to PAL resolution */
 	/* or, when using TrueType fonts, pick PAL / HD / full-HD based on TTFScreenResX */
 
@@ -5612,7 +5687,7 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 		FT_Done_FreeType(renderinfo->library);
 		return 0;
 	}
-
+#endif
 	/* get fixed screeninfo */
 	if (ioctl(renderinfo->fb, FBIOGET_FSCREENINFO, &renderinfo->fix_screeninfo) == -1)
 	{
@@ -5637,8 +5712,16 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 	renderinfo->var_screeninfo.yoffset);
 #endif
 		/* map framebuffer into memory */
+#ifndef __sh__
 	renderinfo->lfb = (unsigned char*)mmap(0, renderinfo->fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 0);
-
+#else
+	// The first 1920x1080x4 bytes are reserved
+	// After that we can take 1280x720x4 bytes for our virtual framebuffer
+	renderinfo->fix_screeninfo.smem_len -= 1920*1080*4;
+	renderinfo->lfb = (unsigned char*)mmap(0, renderinfo->fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 1920*1080*4);
+	renderinfo->strideSc = renderinfo->fix_screeninfo.line_length;
+	renderinfo->fix_screeninfo.line_length = 720*4; 
+#endif
 	/* set new colormap */
 	tuxtxt_setcolors(renderinfo,(unsigned short *)tuxtxt_defaultcolors, 0, tuxtxt_color_SIZECOLTABLE);
 
@@ -5680,9 +5763,10 @@ void tuxtxt_EndRendering(tstRenderInfo* renderinfo)
 	if (renderinfo->var_screeninfo.yoffset)
 	{
 		renderinfo->var_screeninfo.yoffset = 0;
-
+#ifndef __sh__
 		if (ioctl(renderinfo->fb, FBIOPAN_DISPLAY, &renderinfo->var_screeninfo) == -1)
 			perror("TuxTxt <FBIOPAN_DISPLAY>");
+#endif
 	}
 	 /* close avs */
 	if (renderinfo->avs >= 0)
