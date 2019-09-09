@@ -204,11 +204,22 @@ int tuxtxt_run_ui(int pid, int demux)
 	tuxtxt_cache.vtxtpid = pid;
 
 	/* open Framebuffer */
+#if defined(__sh__)
+	if ((renderinfo.fb=open(FB_DEV, O_RDWR)) == -1)
+	{
+		if ((renderinfo.fb=open("/dev/fb0", O_RDWR)) == -1)
+		{
+			printf("TuxTxt <open %s>: %m", FB_DEV);
+			return 0;
+		}
+	}
+#else
 	if ((renderinfo.fb=open(FB_DEV, O_RDWR)) == -1)
 	{
 		printf("TuxTxt <open %s>: %m", FB_DEV);
 		return 0;
 	}
+#endif
 	rc[0] = rc[1] =-1;
 	while(rc_num < 2)
 	{
@@ -227,6 +238,8 @@ int tuxtxt_run_ui(int pid, int demux)
 			perror("EVIOCGNAME failed");
 #ifdef HAVE_NOGAMMA
 		if (!strstr(tmp, "remote control") && !strstr(tmp, "key") && !strstr(tmp, "HBGIC"))
+#elif defined(__sh__) 
+		if (!strstr(tmp, "TDT RC event driver"))
 #else
 		if (!strstr(tmp, "remote control") && !strstr(tmp, "key"))
 #endif
@@ -235,7 +248,11 @@ int tuxtxt_run_ui(int pid, int demux)
 			rc[rc_num] = -1;
 		}
 		else
+#if defined(__sh__)
+			break;
+#else
 			++rc_num;
+#endif
 		++cnt;
 	}
 
