@@ -14,9 +14,6 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include "tuxtxt_def.h"
-#ifdef HAVE_DBOX_HARDWARE
-#include <tuxbox.h>
-#endif
 #if TUXTXT_COMPRESS == 1
 #include <zlib.h>
 #endif
@@ -64,16 +61,16 @@ tstPageAttr tuxtxt_atrtable[] =
 	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MSGDRM3 */
 	{ tuxtxt_color_menu1  , tuxtxt_color_blue  , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL0 5a Z */
 	{ tuxtxt_color_white  , tuxtxt_color_blue  , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL1 58 X */
-	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL2 9b › */
-	{ tuxtxt_color_menu2  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU0 ab « */
-	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU1 a4 ¤ */
-	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU2 9b › */
-	{ tuxtxt_color_menu2  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU3 cb Ë */
-	{ tuxtxt_color_cyan   , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU4 c7 Ç */
-	{ tuxtxt_color_white  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU5 c8 È */
-	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU6 a8 ¨ */
-	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_CATCHMENU0 a4 ¤ */
-	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}  /* ATR_CATCHMENU1 a8 ¨ */
+	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL2 9b â€º */
+	{ tuxtxt_color_menu2  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU0 ab Â« */
+	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU1 a4 Â¤ */
+	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU2 9b â€º */
+	{ tuxtxt_color_menu2  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU3 cb Ã‹ */
+	{ tuxtxt_color_cyan   , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU4 c7 Ã‡ */
+	{ tuxtxt_color_white  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU5 c8 ÄŒ */
+	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU6 a8 Â¨ */
+	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_CATCHMENU0 a4 Â¤ */
+	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}  /* ATR_CATCHMENU1 a8 Â¨ */
 };
 
 // G2 Set as defined in ETS 300 706
@@ -1204,7 +1201,6 @@ void *tuxtxt_CacheThread(void *arg)
 
 	printf("TuxTxt running thread...(%03x)\n",tuxtxt_cache.vtxtpid);
 	tuxtxt_cache.receiving = 1;
-	nice(3);
 	while (1)
 	{
 		/* check stopsignal */
@@ -1695,16 +1691,11 @@ int tuxtxt_start_thread()
 
 	/* set filter & start demuxer */
 	dmx_flt.pid      = tuxtxt_cache.vtxtpid;
-#ifndef HAVE_TRIPLEDRAGON
-	dmx_flt.input    = DMX_IN_FRONTEND;
-	dmx_flt.output   = DMX_OUT_TAP;
-#else
 	struct UnloaderConfig_t u;
 	u.unloader_type  = UNLOADER_TYPE_PAYLOAD;
 	u.threshold      = 64;
 	dmx_flt.unloader = u;
 	dmx_flt.output   = OUT_MEMORY;
-#endif
 	dmx_flt.pes_type = DMX_PES_OTHER;
 	dmx_flt.flags    = DMX_IMMEDIATE_START;
 
@@ -4006,12 +3997,12 @@ int tuxtxt_RenderChar(unsigned char *lfb, // pointer to render buffer, min. font
 			tuxtxt_FillRect(lfb,xres,*pPosX + curfontwidth/2, PosY, (curfontwidth+1)/2, fontheight, bgcolor);
 			*pPosX += curfontwidth;
 			return 0;
-		case 0xEA: /* °  */
+		case 0xEA: /* Â°  */
 			tuxtxt_FillRect(lfb,xres,*pPosX, PosY, curfontwidth, fontheight, bgcolor);
 			tuxtxt_FillRect(lfb,xres,*pPosX, PosY, curfontwidth/2, curfontwidth/2, fgcolor);
 			*pPosX += curfontwidth;
 			return 0;
-		case 0xEB: /* ¬ */
+		case 0xEB: /* Â¬ */
 			tuxtxt_FillRect(lfb,xres,*pPosX, PosY +1, curfontwidth, fontheight -1, bgcolor);
 			for (Row=0; Row < curfontwidth/2; Row++)
 				tuxtxt_DrawHLine(lfb,xres,*pPosX + Row, PosY + Row, curfontwidth - Row, fgcolor);
@@ -4509,6 +4500,16 @@ void tuxtxt_RenderClearMenuLineBB(tstRenderInfo* renderinfo,char *p, tstPageAttr
  * SwitchScreenMode                                                           *
  ******************************************************************************/
 
+void writeproc(const char* dest, const char *value)
+{
+	FILE *f=fopen(dest, "w");
+	if (f)
+	{
+		fwrite(value, strlen(value), 1, f);
+		fclose(f);
+	}
+}
+
 void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 {
 	/* reset transparency mode */
@@ -4531,11 +4532,9 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 	tuxtxt_cache.pageupdate = 1;
 
 	/* clear back buffer */
-#ifdef HAVE_DBOX_HARDWARE
-	renderinfo->clearbbcolor = tuxtxt_color_black;
-#else
+//	renderinfo->clearbbcolor = tuxtxt_color_black;
 	renderinfo->clearbbcolor = renderinfo->screenmode?tuxtxt_color_transp:tuxtxt_cache.FullScrColor;
-#endif
+
 	tuxtxt_ClearBB(renderinfo,renderinfo->clearbbcolor);
 
 
@@ -4556,10 +4555,6 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 			tx = TV43STARTX;
 			ty = TV43STARTY;
 			th = TV43HEIGHT;
-#ifdef BOXMODEL_DM500
-			tw = renderinfo->var_screeninfo.xres/4; // DM500 seems to only like PIG sizes with same ratio
-			th = renderinfo->var_screeninfo.yres/4;
-#endif
 		}
 		else /* 2: split with full height tv picture */
 		{
@@ -4570,10 +4565,6 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 			tw = TV169FULLWIDTH;
 			th = TV169FULLHEIGHT;
 			renderinfo->displaywidth= (TV169FULLSTARTX-renderinfo->sx);
-#ifdef BOXMODEL_DM500
-			tw = renderinfo->var_screeninfo.xres/2; // DM500 seems to only like PIG sizes with same ratio
-			th = renderinfo->var_screeninfo.yres/2;
-#endif
 		}
 
 		tuxtxt_setfontwidth(renderinfo,fw);
@@ -4833,26 +4824,6 @@ void tuxtxt_CreateLine25(tstRenderInfo* renderinfo)
 	}
 }
 
-#ifdef HAVE_TRIPLEDRAGON
-void tdfb_attr(void)
-{
-	int gfx = open("/dev/stb/tdgfx", O_RDONLY);
-	if (gfx < 0)
-	{
-		perror("/dev/stb/tdgfx");
-		return;
-	}
-	Stb04GFXOsdControl tmpctrl;
-	if (ioctl(gfx, STB04GFX_OSD_GETCONTROL, &tmpctrl) < 0)
-		perror("[tuxtxt:tdfb_attr] STB04GFX_OSD_GETCONTROL failed");
-	tmpctrl.use_global_alpha = 0;
-	tmpctrl.undefined_Colors_Transparent = 1;
-	if (ioctl(gfx, STB04GFX_OSD_SETCONTROL, &tmpctrl) < 0)
-		perror("[tuxtxt:tdfb_attr] STB04GFX_OSD_SETCONTROL failed");
-	close(gfx);
-}
-#endif
-
 
 /******************************************************************************
  * CopyBB2FB                                                                  *
@@ -4876,9 +4847,6 @@ void tuxtxt_CopyBB2FB(tstRenderInfo* renderinfo)
 			renderinfo->var_screeninfo.yoffset = renderinfo->var_screeninfo.yres;
 		if (ioctl(renderinfo->fb, FBIOPAN_DISPLAY, &renderinfo->var_screeninfo) == -1)
 			perror("TuxTxt <FBIOPAN_DISPLAY>");
-#ifdef HAVE_TRIPLEDRAGON
-		tdfb_attr();
-#endif
 		if (renderinfo->StartX > 0 && *renderinfo->lfb != *(renderinfo->lfb + renderinfo->fix_screeninfo.line_length * renderinfo->var_screeninfo.yres)) /* adapt background of backbuffer if changed */
 			tuxtxt_FillBorder(renderinfo,*(renderinfo->lfb + renderinfo->fix_screeninfo.line_length * renderinfo->var_screeninfo.yoffset));
 //			 ClearBB(*(lfb + renderinfo->var_screeninfo.xres * renderinfo->var_screeninfo.yoffset));
@@ -5138,11 +5106,9 @@ void tuxtxt_DoRender(tstRenderInfo* renderinfo, int startrow, int national_subse
 		if (renderinfo->transpmode || (renderinfo->boxed && !renderinfo->screenmode))
 		{
 			tuxtxt_FillBorder(renderinfo,tuxtxt_color_transp);//ClearBB(transp);
-#if !defined HAVE_DREAMBOX_HARDWARE && !defined HAVE_IPBOX_HARDWARE
+
 			renderinfo->clearbbcolor = tuxtxt_color_black;
-#else
-			renderinfo->clearbbcolor = tuxtxt_color_transp;
-#endif
+//			renderinfo->clearbbcolor = tuxtxt_color_transp;
 		}
 
 		/* get national subset */

@@ -4,7 +4,7 @@
 #ifndef TUXTXT_DEF_H
 
 #define TUXTXT_DEF_H
-#if defined HAVE_DREAMBOX_HARDWARE || defined HAVE_IPBOX_HARDWARE || defined HAVE_ZLIB
+#if defined HAVE_ZLIB
  #define TUXTXT_COMPRESS 1 // compress page data: 0 no compression, 1 with zlib, 2 with own algorithm
 #else
  #define TUXTXT_COMPRESS 2
@@ -14,11 +14,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#ifdef HAVE_TRIPLEDRAGON
-#include <tuxbox/zapit/td-demux-compat.h>
-#include <tddevices.h>
-#define DMX "/dev/" DEVICE_NAME_DEMUX "0"
-#else
 #if HAVE_DVB_API_VERSION < 3
  #define dmx_pes_filter_params dmxPesFilterParams
  #define pes_type pesType
@@ -26,7 +21,6 @@
  #include <ost/dmx.h>
 #else
  #include <linux/dvb/dmx.h>
-#endif
 #endif
 
 #define DMX tuxtxt_cache.demux
