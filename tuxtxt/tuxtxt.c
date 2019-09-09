@@ -25,10 +25,6 @@
 
 #include "tuxtxt.h"
 
-#ifdef HAVE_TRIPLEDRAGON
-#include <td-compat/tdlcd-plugin-compat.c>
-#endif
-
 static char saved_wss[32];
 static char saved_pin8[32];
 
@@ -660,22 +656,6 @@ void CleanUp()
 	tuxtxt_cache.dmx = -1;
 #endif
 
-#ifdef HAVE_DBOX_HARDWARE
-	if (restoreaudio)
-	{
-		int vendor = tuxbox_get_vendor() - 1;
-		if (vendor < 3) /* scart-parameters only known for 3 dboxes, FIXME: order must be like in info.h */
-		{
-			for (i = 1; i < 6; i += 2) /* restore dvb audio */
-			{
-				n = avstable_dvb[vendor][i];
-				if ((ioctl(renderinfo.avs, avstable_ioctl[i], &n)) < 0)
-					perror("TuxTxt <ioctl(avs)>");
-			}
-		}
-	}
-#endif
-
 	/* close lcd */
 	if (lcd >= 0)
 	{
@@ -774,7 +754,6 @@ int GetTeletextPIDs()
 	RenderMessage(ShowInfoBar);
 
 	/* read PAT to get all PMT's */
-#ifndef HAVE_TRIPLEDRAGON
 #if HAVE_DVB_API_VERSION < 3
 	memset(dmx_flt.filter.filter, 0, DMX_FILTER_SIZE);
 	memset(dmx_flt.filter.mask, 0, DMX_FILTER_SIZE);
@@ -784,14 +763,6 @@ int GetTeletextPIDs()
 
 	dmx_flt.filter.filter[0] = 0x00;
 	dmx_flt.filter.mask[0]   = 0xFF;
-#else
-	memset(&dmx_flt, 0, sizeof(struct dmx_sct_filter_params));
-	dmx_flt.filter[0]        = 0x00;
-	dmx_flt.mask[0]          = 0xFF;
-	dmx_flt.filter_length    = 3;
-#define DMX_CHECK_CRC 0
-#endif
-
 	dmx_flt.pid              = 0x0000;
 	dmx_flt.flags            = DMX_ONESHOT | DMX_CHECK_CRC | DMX_IMMEDIATE_START;
 	dmx_flt.timeout          = 5000;
@@ -822,27 +793,11 @@ int GetTeletextPIDs()
 #endif
 		if (((PAT[pat_scan - 2]<<8) | (PAT[pat_scan - 1])) == 0)
 			continue;
-// workaround for Dreambox PMT "Connection timed out"-problem (not very nice, but it works...)
-#ifdef HAVE_DREAMBOX_HARDWARE
-		ioctl(dmx, DMX_STOP);
-		close(dmx);
-		if ((dmx = open(DMX, O_RDWR)) == -1)
-		{
-			perror("TuxTxt <open DMX>");
-			return 0;
-		}
-#endif
 		dmx_flt.pid               = (PAT[pat_scan]<<8 | PAT[pat_scan+1]) & 0x1FFF;
 		dmx_flt.flags             = DMX_ONESHOT | DMX_CHECK_CRC | DMX_IMMEDIATE_START;
 		dmx_flt.timeout           = 5000;
-#ifndef HAVE_TRIPLEDRAGON
 		dmx_flt.filter.filter[0]  = 0x02;
 		dmx_flt.filter.mask[0]    = 0xFF;
-#else
-		dmx_flt.filter[0]         = 0x02;
-		dmx_flt.mask[0]           = 0xFF;
-		dmx_flt.filter_length     = 3;
-#endif
 		if (ioctl(dmx, DMX_SET_FILTER, &dmx_flt) == -1)
 		{
 			perror("TuxTxt <DMX_SET_FILTER PMT>");
@@ -923,14 +878,8 @@ skip_pid:
 
 	dmx_flt.pid              = 0x0011;
 	dmx_flt.flags            = DMX_CHECK_CRC | DMX_IMMEDIATE_START;
-#ifndef HAVE_TRIPLEDRAGON
 	dmx_flt.filter.filter[0] = 0x42;
 	dmx_flt.filter.mask[0]   = 0xFF;
-#else
-	dmx_flt.filter[0]        = 0x42;
-	dmx_flt.mask[0]          = 0xFF;
-	dmx_flt.filter_length    = 3;
-#endif
 	dmx_flt.timeout          = 5000;
 
 	if (ioctl(dmx, DMX_SET_FILTER, &dmx_flt) == -1)
@@ -2564,15 +2513,6 @@ void RenderMessage(int Message)
 	renderinfo.zoommode = 0;
 
 	/* set colors */
-#if defined(HAVE_DBOX_HARDWARE) || defined(HAVE_TRIPLEDRAGON)
-	if (renderinfo.screenmode)
-	{
-		fbcolor   = tuxtxt_color_black;
-		timecolor = tuxtxt_color_black<<4 | tuxtxt_color_black;
-		menuatr = ATR_MSGDRM0;
-	}
-	else
-#endif
 	{
 		fbcolor   = tuxtxt_color_transp;
 		timecolor = tuxtxt_color_transp<<4 | tuxtxt_color_transp;
@@ -2700,11 +2640,7 @@ void UpdateLCD()
 			}
 		}
 
-#ifdef HAVE_TRIPLEDRAGON
-		dbox2_to_tdLCD(lcd, lcd_backbuffer);
-#else
 		write(lcd, &lcd_backbuffer, sizeof(lcd_backbuffer));
-#endif
 
 		for (y = 16; y < 56; y += 8)	/* clear rectangle in backbuffer */
 			for (x = 1; x < 118; x++)
@@ -2858,22 +2794,17 @@ void UpdateLCD()
 	}
 
 	if (update_lcd)
-#ifdef HAVE_TRIPLEDRAGON
-		dbox2_to_tdLCD(lcd, lcd_backbuffer);
-#else
 #	ifdef HAVE_TEXTLCD
 		write(lcd, &lcd_backbuffer, 12);
 #	else
 		write(lcd, &lcd_backbuffer, sizeof(lcd_backbuffer));
 #	endif
-#endif
 }
 
 
 /******************************************************************************
  * GetRCCode                                                                  *
  ******************************************************************************/
-#ifndef HAVE_TRIPLEDRAGON
 #if TUXTXT_PLUGIN_KEY_HANDLING
 int GetRCCode()
 {
@@ -3001,64 +2932,6 @@ int GetRCCode()
 	}
 
 	RCCode = -1;
-
-	return 0;
-}
-#endif
-#else /* tripledragon */
-int GetRCCode()
-{
-	static unsigned short LastKey = -1;
-	if (read(rc, &RCCode, 2) == 2)
-	{
-		// fprintf(stderr, "rccode: %04x\n", RCCode);
-		if (RCCode != LastKey)
-		{
-			LastKey = RCCode;
-			if ((RCCode & 0xFF00) == 0x0000)
-			{
-				switch (RCCode)
-				{
-				case 0x18:		RCCode = RC_UP;		break;
-				case 0x1c:		RCCode = RC_DOWN;	break;
-				case 0x19:		RCCode = RC_LEFT;	break;
-				case 0x1b:		RCCode = RC_RIGHT;	break;
-				case 0x1a:		RCCode = RC_OK;		break;
-				case 0x0e:		RCCode = RC_0;		break;
-				case 0x02:		RCCode = RC_1;		break;
-				case 0x03:		RCCode = RC_2;		break;
-				case 0x04:		RCCode = RC_3;		break;
-				case 0x05:		RCCode = RC_4;		break;
-				case 0x06:		RCCode = RC_5;		break;
-				case 0x07:		RCCode = RC_6;		break;
-				case 0x09:		RCCode = RC_7;		break;
-				case 0x0a:		RCCode = RC_8;		break;
-				case 0x0b:		RCCode = RC_9;		break;
-				case 0x1f:		RCCode = RC_RED;	break;
-				case 0x20:		RCCode = RC_GREEN;	break;
-				case 0x21:		RCCode = RC_YELLOW;	break;
-				case 0x22:		RCCode = RC_BLUE;	break;
-				case 0x29:		RCCode = RC_PLUS;	break; // [=X=] key -> double height
-				case 0x27:		RCCode = RC_MINUS;	break; // [txt] key -> split mode
-				case 0x11:		RCCode = RC_MUTE;	break;
-				case 0x28:		RCCode = RC_MUTE;	break; // [ /=] key
-				case 0x14:		RCCode = RC_HELP;	break;
-				case 0x2a:		RCCode = RC_HELP;	break; // [==?] key
-				case 0x12:		RCCode = RC_DBOX;	break;
-				case 0x15:		RCCode = RC_HOME;	break;
-				case 0x01:		RCCode = RC_STANDBY;	break;
-				}
-				return 1;
-			}
-		}
-		else
-			RCCode = -1;
-
-		return 1;
-	}
-
-	RCCode = -1;
-	usleep(1000000/100);
 
 	return 0;
 }
