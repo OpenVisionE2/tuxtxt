@@ -1,3 +1,4 @@
+from __future__ import print_function
 from enigma import eTuxtxtApp, getDesktop
 from Screens.Screen import Screen
 from Plugins.Plugin import PluginDescriptor
@@ -149,7 +150,7 @@ class ShellStarter(Screen):
 
 	def setOSDAlpha(self,configElement):
 		if SystemInfo["CanChangeOsdAlpha"]:
-			print 'Tuxtxt setting OSD alpha:', str(configElement.value)
+			print('Tuxtxt setting OSD alpha:', str(configElement.value))
 			config.av.osd_alpha.setValue(configElement.value)
 			f = open("/proc/stb/video/alpha", "w")
 			f.write(str(configElement.value))
