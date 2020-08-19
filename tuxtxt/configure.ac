@@ -1,4 +1,4 @@
-AC_INIT(tuxtxt,0.0.1)
+AC_INIT(tuxtxt,2.0.1)
 AM_INIT_AUTOMAKE([foreign])
 
 AC_PROG_CC
@@ -10,7 +10,6 @@ AM_PATH_PYTHON
 TUXBOX_APPS
 TUXBOX_APPS_DIRECTORY
 TUXBOX_APPS_DVB
-TUXBOX_BOXTYPE
 
 PKG_CHECK_MODULES(FREETYPE, [freetype2])
 PKG_CHECK_MODULES(TUXTXT, tuxbox-tuxtxt)
@@ -33,6 +32,16 @@ AC_ARG_WITH(fbdev,
 if test x"$with_fbdev" != xno ; then
         AC_DEFINE_UNQUOTED(FB_DEV, "$withval", [Defines which device to use for main framebuffer (e.g. /dev/fb0)])
 fi
+
+AC_ARG_WITH(nogamma,
+        AC_HELP_STRING([--with-nogamma], [use nogamma hacks]),
+        [[withnogamma=$withval]],
+        [[withnogamma=no]]
+)
+if test x"$withnogamma" != xno ; then
+        AC_DEFINE(HAVE_NOGAMMA, 1,[Define when using nogamma hacks])
+fi
+AM_CONDITIONAL(HAVE_NOGAMMA, test x"$withnogamma" != xno)
 
 AC_OUTPUT([
 Makefile

@@ -27,9 +27,6 @@
 
 #include <config.h>
 
-#ifdef HAVE_DBOX_HARDWARE
-#include <tuxbox.h>
-#endif
 #if HAVE_DVB_API_VERSION >= 3
 #include <linux/input.h>
 #endif

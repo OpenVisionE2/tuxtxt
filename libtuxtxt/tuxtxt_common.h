@@ -14,14 +14,77 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include "tuxtxt_def.h"
-#ifdef HAVE_DBOX_HARDWARE
-#include <tuxbox.h>
-#endif
 #if TUXTXT_COMPRESS == 1
 #include <zlib.h>
 #endif
 
 #include <linux/input.h>
+
+#ifndef FB_DEV
+# define FB_DEV "/dev/fb/0"
+#endif
+
+#ifdef __sh__
+#include <linux/stmfb.h>
+
+void blit(tstRenderInfo* renderinfo)
+{
+	STMFBIO_BLT_DATA  bltData;
+	memset(&bltData, 0, sizeof(STMFBIO_BLT_DATA));
+
+	bltData.operation  = BLT_OP_COPY;
+	bltData.srcOffset  = 1920*1080*4;
+
+	if (!renderinfo->var_screeninfo.yoffset) // First Buffer
+		;
+	else // Second Buffer
+		bltData.srcOffset += renderinfo->var_screeninfo.xres * renderinfo->var_screeninfo.yres * 4;
+
+	bltData.srcPitch   = 720 * 4;
+	bltData.srcFormat  = SURF_BGRA8888;
+	bltData.dstFormat  = SURF_BGRA8888;
+	bltData.dstOffset  = 0;
+	bltData.dstPitch   = renderinfo->strideSc;
+	bltData.dst_top    = 0;
+	bltData.dst_left   = 0;
+	bltData.dst_right  = renderinfo->xResSc;
+	bltData.dst_bottom = renderinfo->yResSc;
+
+	if (renderinfo->zoommode == 0)
+	{
+		bltData.src_top    = 0;
+		bltData.src_left   = 0;
+		bltData.src_right  = 720;
+		bltData.src_bottom = 576;
+	}
+	else if (renderinfo->zoommode == 1)
+	{
+		bltData.src_top    = 0;
+		bltData.src_left   = 0;
+		bltData.src_right  = 720;
+		bltData.src_bottom = 576 / 2;
+	}
+	else if (renderinfo->zoommode == 2)
+	{
+		bltData.src_top    = 576 / 2;
+		bltData.src_left   = 0;
+		bltData.src_right  = 720;
+		bltData.src_bottom = 576;
+	}
+	else
+		return;
+
+	if ( ioctl(renderinfo->fb, STMFBIO_BLT, &bltData ) < 0)
+	{
+		perror("ioctl STMFBIO_BLT");
+	}
+
+	if(ioctl(renderinfo->fb, STMFBIO_SYNC_BLITTER) < 0)
+	{
+		perror("ioctl STMFBIO_SYNC_BLITTER");
+	}
+}
+#endif
 
 const char *ObjectSource[] =
 {
@@ -60,16 +123,16 @@ tstPageAttr tuxtxt_atrtable[] =
 	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MSGDRM3 */
 	{ tuxtxt_color_menu1  , tuxtxt_color_blue  , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL0 5a Z */
 	{ tuxtxt_color_white  , tuxtxt_color_blue  , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL1 58 X */
-	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL2 9b › */
-	{ tuxtxt_color_menu2  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU0 ab « */
-	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU1 a4 ¤ */
-	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU2 9b › */
-	{ tuxtxt_color_menu2  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU3 cb Ë */
-	{ tuxtxt_color_cyan   , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU4 c7 Ç */
-	{ tuxtxt_color_white  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU5 c8 È */
-	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU6 a8 ¨ */
-	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_CATCHMENU0 a4 ¤ */
-	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}  /* ATR_CATCHMENU1 a8 ¨ */
+	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENUHIL2 9b â€º */
+	{ tuxtxt_color_menu2  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU0 ab Â« */
+	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU1 a4 Â¤ */
+	{ tuxtxt_color_menu2  , tuxtxt_color_transp, C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU2 9b â€º */
+	{ tuxtxt_color_menu2  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU3 cb Ã‹ */
+	{ tuxtxt_color_cyan   , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU4 c7 Ã‡ */
+	{ tuxtxt_color_white  , tuxtxt_color_menu3 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU5 c8 ÄŒ */
+	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_MENU6 a8 Â¨ */
+	{ tuxtxt_color_yellow , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}, /* ATR_CATCHMENU0 a4 Â¤ */
+	{ tuxtxt_color_white  , tuxtxt_color_menu1 , C_G0P, 0, 0, 0 ,0, 0, 0, 0, 0, 0, 0, 0x3f}  /* ATR_CATCHMENU1 a8 Â¨ */
 };
 
 // G2 Set as defined in ETS 300 706
@@ -1200,7 +1263,6 @@ void *tuxtxt_CacheThread(void *arg)
 
 	printf("TuxTxt running thread...(%03x)\n",tuxtxt_cache.vtxtpid);
 	tuxtxt_cache.receiving = 1;
-	nice(3);
 	while (1)
 	{
 		/* check stopsignal */
@@ -1691,16 +1753,8 @@ int tuxtxt_start_thread()
 
 	/* set filter & start demuxer */
 	dmx_flt.pid      = tuxtxt_cache.vtxtpid;
-#ifndef HAVE_TRIPLEDRAGON
 	dmx_flt.input    = DMX_IN_FRONTEND;
 	dmx_flt.output   = DMX_OUT_TAP;
-#else
-	struct UnloaderConfig_t u;
-	u.unloader_type  = UNLOADER_TYPE_PAYLOAD;
-	u.threshold      = 64;
-	dmx_flt.unloader = u;
-	dmx_flt.output   = OUT_MEMORY;
-#endif
 	dmx_flt.pes_type = DMX_PES_OTHER;
 	dmx_flt.flags    = DMX_IMMEDIATE_START;
 
@@ -4002,12 +4056,12 @@ int tuxtxt_RenderChar(unsigned char *lfb, // pointer to render buffer, min. font
 			tuxtxt_FillRect(lfb,xres,*pPosX + curfontwidth/2, PosY, (curfontwidth+1)/2, fontheight, bgcolor);
 			*pPosX += curfontwidth;
 			return 0;
-		case 0xEA: /* °  */
+		case 0xEA: /* Â°  */
 			tuxtxt_FillRect(lfb,xres,*pPosX, PosY, curfontwidth, fontheight, bgcolor);
 			tuxtxt_FillRect(lfb,xres,*pPosX, PosY, curfontwidth/2, curfontwidth/2, fgcolor);
 			*pPosX += curfontwidth;
 			return 0;
-		case 0xEB: /* ¬ */
+		case 0xEB: /* Â¬ */
 			tuxtxt_FillRect(lfb,xres,*pPosX, PosY +1, curfontwidth, fontheight -1, bgcolor);
 			for (Row=0; Row < curfontwidth/2; Row++)
 				tuxtxt_DrawHLine(lfb,xres,*pPosX + Row, PosY + Row, curfontwidth - Row, fgcolor);
@@ -4067,6 +4121,11 @@ int tuxtxt_RenderChar(unsigned char *lfb, // pointer to render buffer, min. font
 #define PIG "/dev/v4l/video0"
 #endif
 
+#define SCALE_UP_X   renderinfo->var_screeninfo.xres/720
+#define SCALE_UP_Y   renderinfo->var_screeninfo.yres/576
+#define SCALE_DOWN_X 720/renderinfo->var_screeninfo.xres
+#define SCALE_DOWN_Y 576/renderinfo->var_screeninfo.yres
+
 #define TOPMENUSTARTX TV43STARTX+2
 #define TOPMENUENDX TVENDX
 #define TOPMENUSTARTY renderinfo->StartY
@@ -4079,12 +4138,12 @@ int tuxtxt_RenderChar(unsigned char *lfb, // pointer to render buffer, min. font
 #define TOPMENUSPC 0
 #define TOPMENUCHARS (TOPMENUINDENTDEF+12+TOPMENUSPC+4)
 
-#define TV43STARTX (renderinfo->ex - 146) //(renderinfo->StartX + 2 + (40-renderinfo->nofirst)*renderinfo->fontwidth_topmenumain + (40*renderinfo->fontwidth_topmenumain/abx))
-#define TV169FULLSTARTX (renderinfo->sx+ 8*40) //(renderinfo->sx +(renderinfo->ex +1 - renderinfo->sx)/2)
+#define TV43STARTX (renderinfo->ex - 146*SCALE_UP_X) //(renderinfo->StartX + 2 + (40-renderinfo->nofirst)*renderinfo->fontwidth_topmenumain + (40*renderinfo->fontwidth_topmenumain/abx))
+#define TV169FULLSTARTX (renderinfo->sx+ 8*40*SCALE_UP_X) //(renderinfo->sx +(renderinfo->ex +1 - renderinfo->sx)/2)
 #define TVENDX renderinfo->ex
 #define TVENDY (renderinfo->StartY + 25*renderinfo->fontheight)
-#define TV43WIDTH 144 /* 120 */
-#define TV43HEIGHT 116 /* 96 */
+#define TV43WIDTH 144*SCALE_UP_X /* 120 */
+#define TV43HEIGHT 116*SCALE_UP_Y /* 96 */
 #define TV43STARTY (TVENDY - TV43HEIGHT)
 #define TV169FULLSTARTY renderinfo->sy
 #define TV169FULLWIDTH  (renderinfo->ex - renderinfo->sx)/2
@@ -4092,9 +4151,11 @@ int tuxtxt_RenderChar(unsigned char *lfb, // pointer to render buffer, min. font
 
 /* fonts */
 #define TUXTXTTTF FONTDIR "/tuxtxt.ttf"
+#define TUXTXTTTFNONBOLD FONTDIR "/tuxtxt_nonbold.ttf"
 #define TUXTXTOTB FONTDIR "/tuxtxt.otb"
 /* alternative fontdir */
 #define TUXTXTTTFVAR "/var/tuxtxt/tuxtxt.ttf"
+#define TUXTXTTTFVARNONBOLD "/var/tuxtxt/tuxtxt_nonbold.ttf"
 #define TUXTXTOTBVAR "/var/tuxtxt/tuxtxt.otb"
 
 int tuxtxt_toptext_getnext(int startpage, int up, int findgroup)
@@ -4183,12 +4244,12 @@ void tuxtxt_setfontwidth(tstRenderInfo* renderinfo,int newwidth)
 }
 void tuxtxt_ClearBB(tstRenderInfo* renderinfo,int color)
 {
-	tuxtxt_FillRect(renderinfo->lfb,renderinfo->fix_screeninfo.line_length,0, renderinfo->var_screeninfo.yres - renderinfo->var_screeninfo.yoffset, renderinfo->fix_screeninfo.line_length, renderinfo->var_screeninfo.yres, color);
+	tuxtxt_FillRect(renderinfo->lfb,renderinfo->fix_screeninfo.line_length,0, renderinfo->var_screeninfo.yres - renderinfo->var_screeninfo.yoffset, renderinfo->var_screeninfo.xres, renderinfo->var_screeninfo.yres, color);
 }
 
 void tuxtxt_ClearFB(tstRenderInfo* renderinfo,int color)
 {
-	tuxtxt_FillRect(renderinfo->lfb,renderinfo->fix_screeninfo.line_length,0, renderinfo->var_screeninfo.yoffset, renderinfo->fix_screeninfo.line_length, renderinfo->var_screeninfo.yres, color);
+	tuxtxt_FillRect(renderinfo->lfb,renderinfo->fix_screeninfo.line_length,0, renderinfo->var_screeninfo.yoffset, renderinfo->var_screeninfo.xres, renderinfo->var_screeninfo.yres, color);
 }
 
 int  tuxtxt_GetCurFontWidth(tstRenderInfo* renderinfo)
@@ -4498,6 +4559,16 @@ void tuxtxt_RenderClearMenuLineBB(tstRenderInfo* renderinfo,char *p, tstPageAttr
  * SwitchScreenMode                                                           *
  ******************************************************************************/
 
+void writeproc(const char* dest, const char *value)
+{
+	FILE *f=fopen(dest, "w");
+	if (f)
+	{
+		fwrite(value, strlen(value), 1, f);
+		fclose(f);
+	}
+}
+
 void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 {
 	/* reset transparency mode */
@@ -4520,11 +4591,9 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 	tuxtxt_cache.pageupdate = 1;
 
 	/* clear back buffer */
-#ifdef HAVE_DBOX_HARDWARE
-	renderinfo->clearbbcolor = tuxtxt_color_black;
-#else
+//	renderinfo->clearbbcolor = tuxtxt_color_black;
 	renderinfo->clearbbcolor = renderinfo->screenmode?tuxtxt_color_transp:tuxtxt_cache.FullScrColor;
-#endif
+
 	tuxtxt_ClearBB(renderinfo,renderinfo->clearbbcolor);
 
 
@@ -4545,10 +4614,6 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 			tx = TV43STARTX;
 			ty = TV43STARTY;
 			th = TV43HEIGHT;
-#ifdef BOXMODEL_DM500
-			tw = renderinfo->var_screeninfo.xres/4; // DM500 seems to only like PIG sizes with same ratio
-			th = renderinfo->var_screeninfo.yres/4;
-#endif
 		}
 		else /* 2: split with full height tv picture */
 		{
@@ -4559,10 +4624,6 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 			tw = TV169FULLWIDTH;
 			th = TV169FULLHEIGHT;
 			renderinfo->displaywidth= (TV169FULLSTARTX-renderinfo->sx);
-#ifdef BOXMODEL_DM500
-			tw = renderinfo->var_screeninfo.xres/2; // DM500 seems to only like PIG sizes with same ratio
-			th = renderinfo->var_screeninfo.yres/2;
-#endif
 		}
 
 		tuxtxt_setfontwidth(renderinfo,fw);
@@ -4580,10 +4641,10 @@ void tuxtxt_SwitchScreenMode(tstRenderInfo* renderinfo,int newscreenmode)
 			int val = 0;
 			switch (i)
 			{
-			case 0: val = tx; break;
-			case 1: val = ty; break;
-			case 2: val = tw; break;
-			case 3: val = th; break;
+			case 0: val = tx*SCALE_DOWN_X; break;
+			case 1: val = ty*SCALE_DOWN_Y; break;
+			case 2: val = tw*SCALE_DOWN_X; break;
+			case 3: val = th*SCALE_DOWN_Y; break;
 			case 4: val = 1; break;
 			}
 			fprintf(f, "%08x\n", val);
@@ -4822,26 +4883,6 @@ void tuxtxt_CreateLine25(tstRenderInfo* renderinfo)
 	}
 }
 
-#ifdef HAVE_TRIPLEDRAGON
-void tdfb_attr(void)
-{
-	int gfx = open("/dev/stb/tdgfx", O_RDONLY);
-	if (gfx < 0)
-	{
-		perror("/dev/stb/tdgfx");
-		return;
-	}
-	Stb04GFXOsdControl tmpctrl;
-	if (ioctl(gfx, STB04GFX_OSD_GETCONTROL, &tmpctrl) < 0)
-		perror("[tuxtxt:tdfb_attr] STB04GFX_OSD_GETCONTROL failed");
-	tmpctrl.use_global_alpha = 0;
-	tmpctrl.undefined_Colors_Transparent = 1;
-	if (ioctl(gfx, STB04GFX_OSD_SETCONTROL, &tmpctrl) < 0)
-		perror("[tuxtxt:tdfb_attr] STB04GFX_OSD_SETCONTROL failed");
-	close(gfx);
-}
-#endif
-
 
 /******************************************************************************
  * CopyBB2FB                                                                  *
@@ -4863,10 +4904,9 @@ void tuxtxt_CopyBB2FB(tstRenderInfo* renderinfo)
 			renderinfo->var_screeninfo.yoffset = 0;
 		else
 			renderinfo->var_screeninfo.yoffset = renderinfo->var_screeninfo.yres;
+#ifndef __sh__
 		if (ioctl(renderinfo->fb, FBIOPAN_DISPLAY, &renderinfo->var_screeninfo) == -1)
 			perror("TuxTxt <FBIOPAN_DISPLAY>");
-#ifdef HAVE_TRIPLEDRAGON
-		tdfb_attr();
 #endif
 		if (renderinfo->StartX > 0 && *renderinfo->lfb != *(renderinfo->lfb + renderinfo->fix_screeninfo.line_length * renderinfo->var_screeninfo.yres)) /* adapt background of backbuffer if changed */
 			tuxtxt_FillBorder(renderinfo,*(renderinfo->lfb + renderinfo->fix_screeninfo.line_length * renderinfo->var_screeninfo.yoffset));
@@ -5127,11 +5167,9 @@ void tuxtxt_DoRender(tstRenderInfo* renderinfo, int startrow, int national_subse
 		if (renderinfo->transpmode || (renderinfo->boxed && !renderinfo->screenmode))
 		{
 			tuxtxt_FillBorder(renderinfo,tuxtxt_color_transp);//ClearBB(transp);
-#if !defined HAVE_DREAMBOX_HARDWARE && !defined HAVE_IPBOX_HARDWARE
+
 			renderinfo->clearbbcolor = tuxtxt_color_black;
-#else
-			renderinfo->clearbbcolor = tuxtxt_color_transp;
-#endif
+//			renderinfo->clearbbcolor = tuxtxt_color_transp;
 		}
 
 		/* get national subset */
@@ -5397,6 +5435,9 @@ void tuxtxt_RenderPage(tstRenderInfo* renderinfo)
 
 		tuxtxt_cache.pageupdate=0;
 	}
+#ifdef __sh__
+	blit(renderinfo);
+#endif
 }
 /******************************************************************************
  * MyFaceRequester
@@ -5426,6 +5467,9 @@ void tuxtxt_SetRenderingDefaults(tstRenderInfo* renderinfo)
 	renderinfo->showflof        = 1;
 	renderinfo->show39          = 1;
 	renderinfo->showl25         = 1;
+	renderinfo->TTFScreenResX   = 720;
+	renderinfo->TTFBold         = 1;
+	renderinfo->CleanAlgo       = 0;
 	renderinfo->TTFWidthFactor16  = 28;
 	renderinfo->TTFHeightFactor16 = 15;
 	renderinfo->color_mode   = 10;
@@ -5509,10 +5553,10 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 	if (renderinfo->usettf)
 	{
 #if ((defined(FREETYPE_MAJOR)) && (((FREETYPE_MAJOR == 2) && (((FREETYPE_MINOR == 1) && (FREETYPE_PATCH >= 9)) || (FREETYPE_MINOR > 1))) || (FREETYPE_MAJOR > 2)))
-		renderinfo->typettf.face_id = (FTC_FaceID) TUXTXTTTFVAR;
+		renderinfo->typettf.face_id = renderinfo->TTFBold ? (FTC_FaceID) TUXTXTTTFVAR : (FTC_FaceID) TUXTXTTTFVARNONBOLD;
 		renderinfo->typettf.height = (FT_UShort) renderinfo->fontheight * renderinfo->TTFHeightFactor16 / 16;
 #else
-		renderinfo->typettf.font.face_id = (FTC_FaceID) TUXTXTTTFVAR;
+		renderinfo->typettf.font.face_id = renderinfo->TTFBold ? (FTC_FaceID) TUXTXTTTFVAR : (FTC_FaceID) TUXTXTTTFVARNONBOLD;
 		renderinfo->typettf.font.pix_height = (FT_UShort) renderinfo->fontheight * renderinfo->TTFHeightFactor16 / 16;
 #endif
 	}
@@ -5533,14 +5577,14 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 	renderinfo->typettf.flags = FT_LOAD_MONOCHROME;
 	if ((error = FTC_Manager_LookupFace(renderinfo->manager, renderinfo->typettf.face_id, &renderinfo->face)))
 	{
-		renderinfo->typettf.face_id = (renderinfo->usettf ? (FTC_FaceID) TUXTXTTTF : TUXTXTOTB);
+		renderinfo->typettf.face_id = (renderinfo->usettf ? (renderinfo->TTFBold ? (FTC_FaceID) TUXTXTTTF : (FTC_FaceID) TUXTXTTTFNONBOLD) : TUXTXTOTB);
 		if ((error = FTC_Manager_LookupFace(renderinfo->manager, renderinfo->typettf.face_id, &renderinfo->face)))
 		{
 #else
 	renderinfo->typettf.image_type = ftc_image_mono;
 	if ((error = FTC_Manager_Lookup_Face(renderinfo->manager, renderinfo->typettf.font.face_id, &renderinfo->face)))
 	{
-		renderinfo->typettf.font.face_id = (renderinfo->usettf ? (FTC_FaceID) TUXTXTTTF : TUXTXTOTB);
+		renderinfo->typettf.font.face_id = (renderinfo->usettf ? (renderinfo->TTFBold ? (FTC_FaceID) TUXTXTTTF : (FTC_FaceID) TUXTXTTTFNONBOLD) : TUXTXTOTB);
 		if ((error = FTC_Manager_Lookup_Face(renderinfo->manager, renderinfo->typettf.font.face_id, &renderinfo->face)))
 		{
 #endif
@@ -5565,12 +5609,94 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 		FT_Done_FreeType(renderinfo->library);
 		return 0;
 	}
-
-	/* change to PAL resolution */
-	if (renderinfo->var_screeninfo.xres != 720) 
+#ifdef __sh__
+printf("%s::%d\n", __FILE__, __LINE__);
+	renderinfo->xResSc = renderinfo->var_screeninfo.xres;
+	renderinfo->yResSc = renderinfo->var_screeninfo.yres;
+	renderinfo->var_screeninfo.xres = 720;
+	renderinfo->var_screeninfo.yres = 576;
+	renderinfo->var_screeninfo.xoffset = 0;
+	renderinfo->var_screeninfo.yoffset = 0;
+#else
+#ifdef TUXTXT_CLEAR_SCREEN
+	/* get fixed screeninfo */
+	if (ioctl(renderinfo->fb, FBIOGET_FSCREENINFO, &renderinfo->fix_screeninfo) == -1)
 	{
-		renderinfo->var_screeninfo.xres_virtual = renderinfo->var_screeninfo.xres = 720;
-		renderinfo->var_screeninfo.yres_virtual = renderinfo->var_screeninfo.yres = 576;
+		perror("TuxTxt <FBIOGET_FSCREENINFO>");
+		FTC_Manager_Done(renderinfo->manager);
+		FT_Done_FreeType(renderinfo->library);
+		return 0;
+	}
+	/* map framebuffer into memory */
+	renderinfo->lfb = (unsigned char*)mmap(0, renderinfo->fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 0);
+	if (!renderinfo->lfb)
+	{
+		perror("TuxTxt <mmap>");
+		FTC_Manager_Done(renderinfo->manager);
+		FT_Done_FreeType(renderinfo->library);
+		return 0;
+	}
+	/* clear screen */
+	memset(renderinfo->lfb, 0, renderinfo->var_screeninfo.yres * renderinfo->fix_screeninfo.line_length);
+	/* unmap framebuffer */
+	msync(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len, MS_SYNC);
+	munmap(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len);
+#endif
+	/* change to PAL resolution */
+	/* or, when using TrueType fonts, pick PAL / HD / full-HD based on TTFScreenResX */
+
+	/* first save variable screeninfo */
+	renderinfo->saved_var_screeninfo = renderinfo->var_screeninfo;
+	
+	/* optionally save framebuffer */
+	if ((renderinfo->CleanAlgo == 1) || (renderinfo->CleanAlgo == 3) || (renderinfo->CleanAlgo == 4))
+	{
+		/* save fixed screeninfo */
+		if (ioctl(renderinfo->fb, FBIOGET_FSCREENINFO, &renderinfo->saved_fix_screeninfo) == -1)
+		{
+			perror("TuxTxt <FBIOGET_FSCREENINFO>");
+			FTC_Manager_Done(renderinfo->manager);
+			FT_Done_FreeType(renderinfo->library);
+			return 0;
+		}
+		
+		unsigned char *my_lfb;
+		my_lfb = (unsigned char*)mmap(0, renderinfo->saved_fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 0);
+		if (!my_lfb)
+		{
+			perror("TuxTxt <mmap>");
+			return 0;
+		}
+		renderinfo->saved_fb = malloc(renderinfo->saved_fix_screeninfo.smem_len);
+		memcpy(renderinfo->saved_fb, my_lfb, renderinfo->saved_fix_screeninfo.smem_len);
+		msync(renderinfo->saved_fb, renderinfo->saved_fix_screeninfo.smem_len, MS_SYNC);
+		munmap(my_lfb, renderinfo->saved_fix_screeninfo.smem_len);
+	}	
+
+	/* now switch resolution */
+	if ((!renderinfo->usettf) || (renderinfo->TTFScreenResX <= 720))
+	{
+		if (renderinfo->var_screeninfo.xres != 720) 
+		{
+			renderinfo->var_screeninfo.xres_virtual = renderinfo->var_screeninfo.xres = 720;
+			renderinfo->var_screeninfo.yres_virtual = renderinfo->var_screeninfo.yres = 576;
+		}
+	}
+	else if (renderinfo->TTFScreenResX <= 1280)
+	{
+		if (renderinfo->var_screeninfo.xres != 1280)
+		{
+			renderinfo->var_screeninfo.xres_virtual = renderinfo->var_screeninfo.xres = 1280;
+			renderinfo->var_screeninfo.yres_virtual = renderinfo->var_screeninfo.yres = 720;
+		}
+	}
+	else
+	{
+		if (renderinfo->var_screeninfo.xres != 1920) 
+		{
+			renderinfo->var_screeninfo.xres_virtual = renderinfo->var_screeninfo.xres = 1920;
+			renderinfo->var_screeninfo.yres_virtual = renderinfo->var_screeninfo.yres = 1080;
+		}
 	}
 
 	/* set variable screeninfo for double buffering */
@@ -5585,7 +5711,7 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 		FT_Done_FreeType(renderinfo->library);
 		return 0;
 	}
-
+#endif
 	/* get fixed screeninfo */
 	if (ioctl(renderinfo->fb, FBIOGET_FSCREENINFO, &renderinfo->fix_screeninfo) == -1)
 	{
@@ -5610,8 +5736,16 @@ int tuxtxt_InitRendering(tstRenderInfo* renderinfo,int setTVFormat)
 	renderinfo->var_screeninfo.yoffset);
 #endif
 		/* map framebuffer into memory */
+#ifndef __sh__
 	renderinfo->lfb = (unsigned char*)mmap(0, renderinfo->fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 0);
-
+#else
+	// The first 1920x1080x4 bytes are reserved
+	// After that we can take 1280x720x4 bytes for our virtual framebuffer
+	renderinfo->fix_screeninfo.smem_len -= 1920*1080*4;
+	renderinfo->lfb = (unsigned char*)mmap(0, renderinfo->fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 1920*1080*4);
+	renderinfo->strideSc = renderinfo->fix_screeninfo.line_length;
+	renderinfo->fix_screeninfo.line_length = 720*4; 
+#endif
 	/* set new colormap */
 	tuxtxt_setcolors(renderinfo,(unsigned short *)tuxtxt_defaultcolors, 0, tuxtxt_color_SIZECOLTABLE);
 
@@ -5653,9 +5787,10 @@ void tuxtxt_EndRendering(tstRenderInfo* renderinfo)
 	if (renderinfo->var_screeninfo.yoffset)
 	{
 		renderinfo->var_screeninfo.yoffset = 0;
-
+#ifndef __sh__
 		if (ioctl(renderinfo->fb, FBIOPAN_DISPLAY, &renderinfo->var_screeninfo) == -1)
 			perror("TuxTxt <FBIOPAN_DISPLAY>");
+#endif
 	}
 	 /* close avs */
 	if (renderinfo->avs >= 0)
@@ -5676,9 +5811,59 @@ void tuxtxt_EndRendering(tstRenderInfo* renderinfo)
 	renderinfo->manager = 0;
 	renderinfo->library = 0;
 	tuxtxt_ClearFB(renderinfo,renderinfo->previousbackcolor);
+#ifdef TUXTXT_CLEAR_SCREEN
+	tuxtxt_ClearBB(renderinfo,renderinfo->previousbackcolor);
+#endif
 	/* unmap framebuffer */
 	msync(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len, MS_SYNC);
 	munmap(renderinfo->lfb, renderinfo->fix_screeninfo.smem_len);
+
+	/* open Framebuffer again */
+	if ((renderinfo->fb=open(FB_DEV, O_RDWR)) == -1)
+	{
+		printf("TuxTxt <open %s>: %m", FB_DEV);
+		return 0;
+	}
+
+	if (renderinfo->CleanAlgo == 4) /* 4 = restore var_screeninfo then framebuffer */
+	{
+		/* restore var_screeninfo */
+		if (ioctl(renderinfo->fb, FBIOPUT_VSCREENINFO, &renderinfo->saved_var_screeninfo) == -1)
+		{
+			perror("TuxTxt <FBIOGET_VSCREENINFO>");
+			return 0;
+		}
+	}
+	
+	if ((renderinfo->CleanAlgo == 1) || (renderinfo->CleanAlgo == 3) || (renderinfo->CleanAlgo == 4)) /* 1 = restore framebuffer, 3 = framebuffer then var_screeninfo */
+	{
+		/* restore framebuffer */
+		unsigned char *my_lfb;
+		my_lfb = (unsigned char*)mmap(0, renderinfo->saved_fix_screeninfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, renderinfo->fb, 0);
+		if (!my_lfb)
+		{
+			perror("TuxTxt <mmap>");
+			return 0;
+		}
+		memcpy(my_lfb, renderinfo->saved_fb, renderinfo->saved_fix_screeninfo.smem_len);
+		msync(my_lfb, renderinfo->saved_fix_screeninfo.smem_len, MS_SYNC);
+		munmap(my_lfb, renderinfo->saved_fix_screeninfo.smem_len);
+		free(renderinfo->saved_fb);
+	}
+
+	if ((renderinfo->CleanAlgo == 2) || (renderinfo->CleanAlgo == 3)) /* 2 = restore var_screeninfo, 3 = framebuffer then var_screeninfo */
+	{
+		/* restore var_screeninfo */
+		if (ioctl(renderinfo->fb, FBIOPUT_VSCREENINFO, &renderinfo->saved_var_screeninfo) == -1)
+		{
+			perror("TuxTxt <FBIOGET_VSCREENINFO>");
+			return 0;
+		}
+	}
+	
+	/* close Framebuffer again */
+	close(renderinfo->fb);
+	
 	printf("[TTX] Rendering ended\n");
 }
 #endif

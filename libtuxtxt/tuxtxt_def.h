@@ -4,7 +4,7 @@
 #ifndef TUXTXT_DEF_H
 
 #define TUXTXT_DEF_H
-#if defined HAVE_DREAMBOX_HARDWARE || defined HAVE_IPBOX_HARDWARE || defined HAVE_ZLIB
+#if defined HAVE_ZLIB
  #define TUXTXT_COMPRESS 1 // compress page data: 0 no compression, 1 with zlib, 2 with own algorithm
 #else
  #define TUXTXT_COMPRESS 2
@@ -14,11 +14,6 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#ifdef HAVE_TRIPLEDRAGON
-#include <tuxbox/zapit/td-demux-compat.h>
-#include <tddevices.h>
-#define DMX "/dev/" DEVICE_NAME_DEMUX "0"
-#else
 #if HAVE_DVB_API_VERSION < 3
  #define dmx_pes_filter_params dmxPesFilterParams
  #define pes_type pesType
@@ -26,7 +21,6 @@
  #include <ost/dmx.h>
 #else
  #include <linux/dvb/dmx.h>
-#endif
 #endif
 
 #define DMX tuxtxt_cache.demux
@@ -301,6 +295,11 @@ typedef struct
 	unsigned char axdrcs[12+1+10+1];
 	struct fb_var_screeninfo var_screeninfo;
 	struct fb_fix_screeninfo fix_screeninfo;
+#ifdef __sh__
+	int xResSc;
+	int yResSc;
+	int strideSc;
+#endif
 	int TTFWidthFactor16, TTFHeightFactor16, TTFShiftX, TTFShiftY; /* parameters for adapting to various TTF fonts */
 	int fontheight, fontwidth, fontwidth_normal, fontwidth_small, fontwidth_topmenumain, fontwidth_topmenusmall, ascender;
 	int displaywidth;
@@ -313,6 +312,12 @@ typedef struct
 	int prev_100, prev_10, next_10, next_100;
 	int showhex, showflof,show39, showl25;
 	int fnc_old, saa_old, screen_mode1, screen_mode2,color_mode, trans_mode;
+	struct fb_var_screeninfo saved_var_screeninfo;
+	struct fb_fix_screeninfo saved_fix_screeninfo;
+	unsigned char *saved_fb;
+	int TTFScreenResX; /* screen resolution (720,1280,1920) when using TTF fonts */
+	int TTFBold; /* 1 = bold font (historic default) */
+	int CleanAlgo;
 	signed char clearbbcolor;
 	FT_Library      library;
 	FTC_Manager     manager;
