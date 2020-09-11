@@ -5,6 +5,7 @@ pkginclude_HEADERS = tuxtxt_def.h tuxtxt_common.h
 
 libtuxtxt_la_SOURCES = libtuxtxt.c
 
+ACLOCAL_AMFLAGS = -I m4
 AM_CPPFLAGS = \
 	@FREETYPE_CFLAGS@ \
 	@ZLIB_CFLAGS@
