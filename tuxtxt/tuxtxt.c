@@ -24,6 +24,7 @@
 
 
 #include "tuxtxt.h"
+#include <sys/stat.h>
 
 static char saved_wss[32];
 static char saved_pin8[32];
@@ -281,7 +282,7 @@ int tuxtxt_run_ui(int pid, int demux)
 	if (tuxtxt_cache.vtxtpid == -1 || renderinfo.fb == -1 || renderinfo.sx == -1 || renderinfo.ex == -1 || renderinfo.sy == -1 || renderinfo.ey == -1)
 	{
 		printf("TuxTxt <Invalid Param(s)>\n");
-		return;
+		return 1;
 	}
 
 	/* initialisations */
@@ -291,7 +292,7 @@ int tuxtxt_run_ui(int pid, int demux)
 			tuxtxt_close();
 		}
 #endif
-		return;
+		return 1;
 	}
 
 	/* Workaround for Gigablue Quad (Plus) */
