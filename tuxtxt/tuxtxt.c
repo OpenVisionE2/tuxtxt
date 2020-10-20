@@ -236,7 +236,7 @@ int tuxtxt_run_ui(int pid, int demux)
 #ifdef HAVE_NOGAMMA
 		if (!strstr(tmp, "remote control") && !strstr(tmp, "key") && !strstr(tmp, "HBGIC"))
 #elif defined(__sh__) 
-		if (!strstr(tmp, "TDT RC event driver"))
+		if (!strstr(tmp, "SH4 RC event driver for remote control"))
 #else
 		if (!strstr(tmp, "remote control") && !strstr(tmp, "key"))
 #endif
