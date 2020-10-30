@@ -58,7 +58,7 @@ class ShellStarter(Screen):
 		self.session = session
 		eTuxtxtApp.getInstance().appClosed.get().append(self.appClosed)
 		eTuxtxtApp.getInstance().startUi()
-		self["actions"] = NumberActionMap(["TeletextActions","NumberActions"],
+		self["actions"] = NumberActionMap(["TeletextActions", "NumberActions"],
 		{
 			"0": self.handleNumberKey,
 			"1": self.handleNumberKey,
@@ -150,7 +150,7 @@ class ShellStarter(Screen):
 	def handleKeyExit(self):
 		eTuxtxtApp.getInstance().handleKey(RcCode.RC_HOME)
 
-	def setOSDAlpha(self,configElement):
+	def setOSDAlpha(self, configElement):
 		if SystemInfo["CanChangeOsdAlpha"]:
 			print('Tuxtxt setting OSD alpha:', str(configElement.value))
 			config.av.osd_alpha.setValue(configElement.value)
