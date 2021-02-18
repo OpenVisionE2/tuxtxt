@@ -42,7 +42,7 @@ class ShellStarter(Screen):
 		<screen position="1,1" size="1,1" title="TuxTXT" >
 		</screen>"""
 
-	def __init__(self, session, args = None):
+	def __init__(self, session, args=None):
 		try: # new config.osd.alpha_teletext may not be available everywhere
 			self.setOSDAlpha(config.osd.alpha_teletext)
 		except:
@@ -162,5 +162,5 @@ def main(session, **kwargs):
 	session.open(ShellStarter)
 
 def Plugins(**kwargs):
-	return PluginDescriptor(name="TuxTXT", description="Videotext", where = PluginDescriptor.WHERE_TELETEXT, fnc=main)
+	return PluginDescriptor(name="TuxTXT", description="Videotext", where=PluginDescriptor.WHERE_TELETEXT, fnc=main)
 
