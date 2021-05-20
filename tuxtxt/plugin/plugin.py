@@ -6,7 +6,7 @@ from Screens.Screen import Screen
 from Plugins.Plugin import PluginDescriptor
 from Components.ActionMap import NumberActionMap
 from Screens.PictureInPicture import PipPigMode
-from Components.SystemInfo import SystemInfo
+from Components.SystemInfo import BoxInfo
 from Components.config import config
 
 
@@ -153,7 +153,7 @@ class ShellStarter(Screen):
 		eTuxtxtApp.getInstance().handleKey(RcCode.RC_HOME)
 
 	def setOSDAlpha(self, configElement):
-		if SystemInfo["CanChangeOsdAlpha"]:
+		if BoxInfo.getItem("CanChangeOsdAlpha"):
 			print('Tuxtxt setting OSD alpha:', str(configElement.value))
 			config.av.osd_alpha.setValue(configElement.value)
 			f = open("/proc/stb/video/alpha", "w")
