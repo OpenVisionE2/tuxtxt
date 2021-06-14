@@ -38,7 +38,11 @@
  ******************************************************************************/
 
 static int tuxtxt_initialized=0;
+#ifdef __GLIBC__
 static pthread_mutex_t tuxtxt_control_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+#else
+static pthread_mutex_t tuxtxt_control_lock = {{PTHREAD_MUTEX_RECURSIVE}};
+#endif
 static pthread_mutex_t tuxtxt_key_queue_lock = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t tuxtxt_key_queue_cond = PTHREAD_COND_INITIALIZER;
 static int tuxtxt_key_queue_waiters=0;
