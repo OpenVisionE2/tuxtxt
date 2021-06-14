@@ -37,6 +37,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <sys/types.h>
+#ifndef __GLIBC__
+#include <sys/stat.h>
+#endif
 #include <sys/time.h>
 #include <ctype.h>
 
