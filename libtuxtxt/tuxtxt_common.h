@@ -20,6 +20,8 @@
 
 #include <linux/input.h>
 
+void writeproc(const char* dest, const char *value);
+
 #ifndef FB_DEV
 # define FB_DEV "/dev/fb/0"
 #endif
