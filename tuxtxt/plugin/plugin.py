@@ -150,14 +150,6 @@ class ShellStarter(Screen):
 	def handleKeyExit(self):
 		eTuxtxtApp.getInstance().handleKey(RcCode.RC_HOME)
 
-	def setOSDAlpha(self, configElement):
-		if BoxInfo.getItem("CanChangeOsdAlpha"):
-			print('Tuxtxt setting OSD alpha:', str(configElement.value))
-			config.av.osd_alpha.setValue(configElement.value)
-			f = open("/proc/stb/video/alpha", "w")
-			f.write(str(configElement.value))
-			f.close()
-
 
 def main(session, **kwargs):
 	session.open(ShellStarter)
